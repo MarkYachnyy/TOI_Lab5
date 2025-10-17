@@ -1,8 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import multivariate_normal
-from mpl_toolkits.mplot3d import Axes3D
-
 
 def vknn_2d(x, XN, k):
     """Оценка плотности методом K ближайших соседей для двумерного случая"""
@@ -15,10 +12,16 @@ def vknn_2d(x, XN, k):
         p_[idx] = k / (N * V) if V > 0 else 0
     return p_
 
-
 # Задаем перебираемые значения величины g
 GG = np.arange(0.1, 1.0, 0.1)
 err = np.zeros_like(GG)  # массив значений ошибок
+
+# 2. Параметры двумерного гауссовского распределения
+mean = np.array([0, 0])  # математическое ожидание
+cov = np.array([[1, 0.5],  # ковариационная матрица
+                [0.5, 1]])
+low_bounds = [-3, -1]
+up_bounds = [3, 1]
 
 # Цикл по числу элементов GG
 for tt in range(len(GG)):
@@ -28,11 +31,6 @@ for tt in range(len(GG)):
     gm = GG[tt]  # подставляем очередное значение из массива GG
     k = round(N ** gm)  # k - число ближайших соседей
 
-    # 2. Параметры двумерного гауссовского распределения
-    mean = np.array([0, 0])  # математическое ожидание
-    cov = np.array([[1, 0.5],  # ковариационная матрица
-                    [0.5, 1]])
-
     # Генерация сетки для визуализации
     x1 = np.arange(-4, 4.1, 0.2)
     x2 = np.arange(-4, 4.1, 0.2)
@@ -40,14 +38,22 @@ for tt in range(len(GG)):
     x_flat = np.vstack([X1.ravel(), X2.ravel()])
 
     # Истинная плотность двумерной гауссовской величины
-    p = multivariate_normal.pdf(x_flat.T, mean=mean, cov=cov)
-
+    ppp = 1/((up_bounds[0]-low_bounds[0])*(up_bounds[1]-low_bounds[1]))
+    p = np.zeros((x_flat.shape[1],))
+    for u in range(len(p)):
+        if (low_bounds[0] < x_flat[0][u] < up_bounds[0]) and (low_bounds[1] < x_flat[1][u] < up_bounds[1]):
+            p[u] = ppp
+        else:
+            p[u] = 0
+    print(p)
     # 3. Генерация обучающей выборки
-    XN = np.random.multivariate_normal(mean, cov, N).T
+    XN = np.random.uniform(low=low_bounds, high=up_bounds, size=(N, 2)).T
+    print("XN", XN)
 
     # 4. Оценка плотности по методу К ближайших соседей
     p_ = vknn_2d(x_flat, XN, k)
 
+    print(p_)
     # Фиксируем среднеквадратичную ошибку
     err[tt] = np.sqrt(np.mean((p - p_) ** 2))
 
@@ -80,8 +86,14 @@ plt.show()
 # Пересчитываем с оптимальным g
 gm_opt = optimal_g
 k_opt = round(N ** gm_opt)
-XN_opt = np.random.multivariate_normal(mean, cov, N).T
-p_true = multivariate_normal.pdf(x_flat.T, mean=mean, cov=cov)
+XN_opt = np.random.uniform(low=low_bounds, high=up_bounds, size=(N, 2)).T
+ppp = 1/((up_bounds[0]-low_bounds[0])*(up_bounds[1]-low_bounds[1]))
+p_true = np.zeros((x_flat.shape[1],))
+for u in range(len(p)):
+    if (low_bounds[0] < x_flat[0][u] < up_bounds[0]) and (low_bounds[1] < x_flat[1][u] < up_bounds[1]):
+        p_true[u] = ppp
+    else:
+        p_true[u] = 0
 p_est = vknn_2d(x_flat, XN_opt, k_opt)
 
 # Преобразуем в матрицы для отображения
